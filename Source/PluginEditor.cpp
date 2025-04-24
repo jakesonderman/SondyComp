@@ -2,48 +2,37 @@
 #include "PluginEditor.h"
 
 MyPluginAudioProcessorEditor::MyPluginAudioProcessorEditor (MyPluginAudioProcessor& p)
-    : AudioProcessorEditor (&p), processorRef (p)
+    : AudioProcessorEditor (&p), 
+      processorRef (p),
+      pluginBorder(sondyLookAndFeel)
 {
-    // Set up the look and feel
-    lookAndFeel.setColourScheme({
-        juce::Colour(0xFF1E1E1E),  // windowBackground
-        juce::Colour(0xFF3E3E3E),  // widgetBackground
-        juce::Colour(0xFF4E4E4E),  // menuBackground
-        juce::Colour(0xFF5E5E5E),  // outline
-        juce::Colour(0xFFAAAAAA),  // defaultText
-        juce::Colour(0xFFFFFFFF),  // defaultFill
-        juce::Colour(0xFFFF5500),  // highlightedText
-        juce::Colour(0xFFFF8800),  // highlightedFill
-        juce::Colour(0xFFFF8800)   // menuText
-    });
+    // Set up our look and feel
+    setLookAndFeel(&sondyLookAndFeel);
     
-    setLookAndFeel(&lookAndFeel);
-    
-    // Title label
-    addAndMakeVisible(titleLabel);
-    titleLabel.setText("Sondy Compressor", juce::dontSendNotification);
-    titleLabel.setFont(juce::Font(juce::Font::getDefaultSansSerifFontName(), 24.0f, juce::Font::bold));
-    titleLabel.setJustificationType(juce::Justification::centred);
+    // Add the border component
+    addAndMakeVisible(pluginBorder);
     
     // Configure sliders
     auto setupSlider = [this](juce::Slider& slider, juce::Label& label, const juce::String& text) {
         addAndMakeVisible(slider);
         slider.setSliderStyle(juce::Slider::RotaryVerticalDrag);
-        slider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 80, 20);
+        slider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 60, 18);
+        slider.setColour(juce::Slider::textBoxOutlineColourId, sondyLookAndFeel.getThemeColors().border);
         
         addAndMakeVisible(label);
         label.setText(text, juce::dontSendNotification);
         label.setJustificationType(juce::Justification::centred);
+        label.setFont(juce::Font(14.0f, juce::Font::bold));
         label.attachToComponent(&slider, false);
     };
     
     // Setup each slider with its label
-    setupSlider(inputGainSlider, inputGainLabel, "Input Gain");
-    setupSlider(outputGainSlider, outputGainLabel, "Output Gain");
-    setupSlider(thresholdSlider, thresholdLabel, "Threshold");
-    setupSlider(kneeSlider, kneeLabel, "Knee");
-    setupSlider(attackTimeSlider, attackTimeLabel, "Attack Time");
-    setupSlider(releaseTimeSlider, releaseTimeLabel, "Release Time");
+    setupSlider(inputGainSlider, inputGainLabel, "INPUT");
+    setupSlider(outputGainSlider, outputGainLabel, "OUTPUT");
+    setupSlider(thresholdSlider, thresholdLabel, "THRESHOLD");
+    setupSlider(kneeSlider, kneeLabel, "KNEE");
+    setupSlider(attackTimeSlider, attackTimeLabel, "ATTACK");
+    setupSlider(releaseTimeSlider, releaseTimeLabel, "RELEASE");
     
     // Connect sliders to parameters
     auto& parameters = processorRef.getParameters();
@@ -79,19 +68,21 @@ MyPluginAudioProcessorEditor::MyPluginAudioProcessorEditor (MyPluginAudioProcess
     });
     
     // Wavetable labels
-    addAndMakeVisible(attackEditorLabel);
-    attackEditorLabel.setText("Attack Curve", juce::dontSendNotification);
-    attackEditorLabel.setJustificationType(juce::Justification::centred);
+    auto setupEditorLabel = [this](juce::Label& label, const juce::String& text) {
+        addAndMakeVisible(label);
+        label.setText(text, juce::dontSendNotification);
+        label.setJustificationType(juce::Justification::centred);
+        label.setFont(juce::Font(14.0f, juce::Font::bold));
+    };
     
-    addAndMakeVisible(releaseEditorLabel);
-    releaseEditorLabel.setText("Release Curve", juce::dontSendNotification);
-    releaseEditorLabel.setJustificationType(juce::Justification::centred);
+    setupEditorLabel(attackEditorLabel, "ATTACK CURVE");
+    setupEditorLabel(releaseEditorLabel, "RELEASE CURVE");
     
     // Set size of the editor
     setSize (800, 600);
     
     // Start the timer to update UI
-    startTimerHz(30);
+    startTimerHz(60);
 }
 
 MyPluginAudioProcessorEditor::~MyPluginAudioProcessorEditor()
@@ -102,19 +93,83 @@ MyPluginAudioProcessorEditor::~MyPluginAudioProcessorEditor()
 
 void MyPluginAudioProcessorEditor::paint (juce::Graphics& g)
 {
-    // Fill the background
-    g.fillAll(lookAndFeel.getCurrentColourScheme().getUIColour(juce::LookAndFeel_V4::ColourScheme::windowBackground));
+    // Draw background animation if enabled
+    if (enableBackgroundAnimation)
+    {
+        drawBackgroundAnimation(g);
+    }
+    
+    // Background is also handled by the border component
+}
+
+void MyPluginAudioProcessorEditor::drawBackgroundAnimation(juce::Graphics& g)
+{
+    const auto& colors = sondyLookAndFeel.getThemeColors();
+    
+    // Create a subtle animated pattern in the background
+    // This will be drawn behind the border
+    const int gridSize = 40;
+    const float minOpacity = 0.05f;
+    const float maxOpacity = 0.12f;
+    
+    // Draw horizontal lines
+    for (int y = -gridSize; y < getHeight() + gridSize; y += gridSize)
+    {
+        float yPhase = (y + animationPhase * 0.3f) / static_cast<float>(getHeight());
+        float opacity = minOpacity + (maxOpacity - minOpacity) * 0.5f * (1.0f + std::sin(yPhase * juce::MathConstants<float>::pi * 8.0f + animationPhase * 0.01f));
+        
+        g.setColour(colors.accent.withAlpha(opacity));
+        
+        // Draw a wavy line
+        juce::Path path;
+        path.startNewSubPath(0, y + std::sin(animationPhase * 0.02f) * 5.0f);
+        
+        for (int x = 0; x < getWidth(); x += 5)
+        {
+            float xPhase = static_cast<float>(x) / static_cast<float>(getWidth());
+            float offset = std::sin(xPhase * juce::MathConstants<float>::pi * 4.0f + animationPhase * 0.02f) * 3.0f;
+            path.lineTo(x, y + offset);
+        }
+        
+        g.strokePath(path, juce::PathStrokeType(0.5f));
+    }
+    
+    // Draw vertical lines
+    for (int x = -gridSize; x < getWidth() + gridSize; x += gridSize)
+    {
+        float xPhase = (x + animationPhase * 0.3f) / static_cast<float>(getWidth());
+        float opacity = minOpacity + (maxOpacity - minOpacity) * 0.5f * (1.0f + std::sin(xPhase * juce::MathConstants<float>::pi * 8.0f + animationPhase * 0.01f));
+        
+        g.setColour(colors.accent.withAlpha(opacity));
+        
+        // Draw a wavy line
+        juce::Path path;
+        path.startNewSubPath(x + std::sin(animationPhase * 0.02f) * 5.0f, 0);
+        
+        for (int y = 0; y < getHeight(); y += 5)
+        {
+            float yPhase = static_cast<float>(y) / static_cast<float>(getHeight());
+            float offset = std::sin(yPhase * juce::MathConstants<float>::pi * 4.0f + animationPhase * 0.02f) * 3.0f;
+            path.lineTo(x + offset, y);
+        }
+        
+        g.strokePath(path, juce::PathStrokeType(0.5f));
+    }
 }
 
 void MyPluginAudioProcessorEditor::resized()
 {
-    auto area = getLocalBounds().reduced(20);
+    // Update border to match component size
+    pluginBorder.setBounds(getLocalBounds());
     
-    // Title at the top
-    titleLabel.setBounds(area.removeFromTop(30));
+    // Content area with some padding from the border
+    auto area = getLocalBounds().reduced(15);
+    
+    // Allow space for the title bar
+    area.removeFromTop(28);
+    area.removeFromTop(5); // Extra space after title
     
     // Gain reduction meter at the top
-    area.removeFromTop(10);
     gainReductionMeter.setBounds(area.removeFromTop(120));
     
     // Main sliders in the middle
@@ -148,18 +203,28 @@ void MyPluginAudioProcessorEditor::resized()
     
     // Attack controls
     attackTimeSlider.setBounds(attackArea.removeFromTop(100).reduced(20));
-    attackEditorLabel.setBounds(attackArea.removeFromTop(20));
-    attackWavetableEditor.setBounds(attackArea.reduced(20));
+    attackEditorLabel.setBounds(attackArea.removeFromTop(25));
+    attackWavetableEditor.setBounds(attackArea.reduced(10));
     
     // Release controls
     releaseTimeSlider.setBounds(releaseArea.removeFromTop(100).reduced(20));
-    releaseEditorLabel.setBounds(releaseArea.removeFromTop(20));
-    releaseWavetableEditor.setBounds(releaseArea.reduced(20));
+    releaseEditorLabel.setBounds(releaseArea.removeFromTop(25));
+    releaseWavetableEditor.setBounds(releaseArea.reduced(10));
 }
 
 void MyPluginAudioProcessorEditor::timerCallback()
 {
     // Update the gain reduction meter
     gainReductionMeter.setGainReduction(processorRef.getCompressor().getCurrentGainReduction());
-    gainReductionMeter.setGainReductionHistory(processorRef.getCompressor().getGainReductionHistory());
+    gainReductionMeter.setInputLevel(processorRef.getCompressor().getCurrentInputLevel());
+    
+    // Update background animation
+    if (enableBackgroundAnimation)
+    {
+        animationPhase += animationSpeed;
+        if (animationPhase > 1000.0f) // Reset to avoid float precision issues
+            animationPhase = 0.0f;
+            
+        repaint();
+    }
 } 

@@ -13,11 +13,30 @@ WavetableEditor::WavetableEditor()
 
 void WavetableEditor::paint(juce::Graphics& g)
 {
-    // Fill background
-    g.fillAll(juce::Colours::black);
+    // Fill background with dark color
+    g.fillAll(juce::Colour(0xFF1D1D1D));
+    
+    // Create an inner shadow effect for depth
+    const auto innerShadowBounds = getLocalBounds().reduced(1);
+    g.setGradientFill(juce::ColourGradient(
+        juce::Colour(0xFF161616), 2.0f, 2.0f,
+        juce::Colour(0xFF1D1D1D), static_cast<float>(getWidth() / 2), static_cast<float>(getHeight() / 2),
+        true));
+    g.fillRect(innerShadowBounds);
+    
+    // Draw border with gradient effect
+    g.setGradientFill(juce::ColourGradient(
+        juce::Colour(0xFF555555), 0.0f, 0.0f,
+        juce::Colour(0xFF383838), 0.0f, static_cast<float>(getHeight()),
+        false));
+    g.drawRect(getLocalBounds(), 1);
+    
+    // Draw second inner border
+    g.setColour(juce::Colour(0xFF303030));
+    g.drawRect(getLocalBounds().reduced(2), 1);
     
     // Draw grid
-    g.setColour(juce::Colours::darkgrey.withAlpha(0.5f));
+    g.setColour(juce::Colour(0xFF353535));
     for (int i = 0; i <= 4; ++i)
     {
         float y = getHeight() * (1.0f - static_cast<float>(i) / 4.0f);
@@ -30,9 +49,21 @@ void WavetableEditor::paint(juce::Graphics& g)
         g.drawLine(x, 0.0f, x, static_cast<float>(getHeight()), 1.0f);
     }
     
-    // Draw wavetable curve
-    g.setColour(juce::Colours::white);
+    // Draw key grid lines with labels
+    g.setColour(juce::Colour(0xFF9E9E9E));
+    g.setFont(11.0f);
     
+    // Draw 0% and 100% labels
+    g.drawText("0%", 5, getHeight() - 20, 30, 15, juce::Justification::left, false);
+    g.drawText("100%", getWidth() - 40, getHeight() - 20, 35, 15, juce::Justification::right, false);
+    
+    // Draw 0% and 100% vertical labels
+    float valueY0 = wavetableValueToY(0.0f);
+    float valueY1 = wavetableValueToY(1.0f);
+    g.drawText("0", 5, static_cast<int>(valueY0) - 15, 15, 15, juce::Justification::left, false);
+    g.drawText("1", 5, static_cast<int>(valueY1) - 15, 15, 15, juce::Justification::left, false);
+    
+    // Draw wavetable curve with gradient
     juce::Path path;
     bool pathStarted = false;
     
@@ -52,20 +83,29 @@ void WavetableEditor::paint(juce::Graphics& g)
         }
     }
     
-    g.strokePath(path, juce::PathStrokeType(2.0f));
+    // Create stroke with thicker line
+    const float lineThickness = 2.5f;
     
-    // Draw constraints text
-    g.setColour(juce::Colours::white);
-    g.setFont(12.0f);
+    // Draw a shadow under the curve for depth
+    g.setColour(juce::Colour(0xFF151515));
+    g.strokePath(path, juce::PathStrokeType(lineThickness + 5.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
     
-    if (isReleaseMode)
-    {
-        g.drawText("Release (Starts at 100%, ends at 0%)", getLocalBounds(), juce::Justification::topLeft, true);
-    }
-    else
-    {
-        g.drawText("Attack (Starts at 0%, ends at 100%)", getLocalBounds(), juce::Justification::topLeft, true);
-    }
+    // Draw the glow effect
+    g.setColour(juce::Colour(0xFF2C9AFF).withAlpha(0.35f));
+    g.strokePath(path, juce::PathStrokeType(lineThickness + 6.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+    
+    // Draw the brighter glow effect (closer to the line)
+    g.setColour(juce::Colour(0xFF2C9AFF).withAlpha(0.4f));
+    g.strokePath(path, juce::PathStrokeType(lineThickness + 3.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+    
+    // Draw the main curve with gradient
+    juce::ColourGradient gradient(
+        juce::Colour(0xFF4CAFFF), 0.0f, 0.0f,
+        juce::Colour(0xFF1C8AFF), 0.0f, static_cast<float>(getHeight()),
+        false);
+    
+    g.setGradientFill(gradient);
+    g.strokePath(path, juce::PathStrokeType(lineThickness, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
 }
 
 void WavetableEditor::resized()

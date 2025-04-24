@@ -57,6 +57,9 @@ void Compressor::process(juce::AudioBuffer<float>& buffer)
         // Convert to dB
         float inputLevelDB = maxLevel > 0.0f ? juce::Decibels::gainToDecibels(maxLevel) : -100.0f;
         
+        // Store the current input level for visualization
+        currentInputLevel = inputLevelDB;
+        
         // Calculate gain reduction and update envelope
         updateEnvelope(inputLevelDB);
         
@@ -233,6 +236,11 @@ const std::array<float, 256>& Compressor::getReleaseWavetable() const
 float Compressor::getCurrentGainReduction() const
 {
     return currentGainReduction;
+}
+
+float Compressor::getCurrentInputLevel() const
+{
+    return currentInputLevel;
 }
 
 const std::array<float, 256>& Compressor::getGainReductionHistory() const

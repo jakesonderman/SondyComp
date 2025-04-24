@@ -37,7 +37,10 @@ target_sources(MyPlugin
         Source/WavetableEditor.cpp
         Source/WavetableEditor.h
         Source/GainReductionMeter.cpp
-        Source/GainReductionMeter.h)
+        Source/GainReductionMeter.h
+        Source/SondyLookAndFeel.cpp
+        Source/SondyLookAndFeel.h
+        Source/PluginBorder.h)
 
 # Add include directories
 target_include_directories(MyPlugin

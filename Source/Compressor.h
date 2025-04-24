@@ -30,6 +30,9 @@ public:
     // Get current gain reduction for visualization
     float getCurrentGainReduction() const;
     
+    // Get the current input level for visualization
+    float getCurrentInputLevel() const;
+    
     // Get gain reduction history buffer for visualization
     const std::array<float, 256>& getGainReductionHistory() const;
     
@@ -48,6 +51,7 @@ private:
     // Envelope follower state
     float currentEnvelope = 0.0f;
     float currentGainReduction = 0.0f;
+    float currentInputLevel = 0.0f;  // Current input level in dB
     
     // Wavetables
     std::array<float, 256> attackWavetable;

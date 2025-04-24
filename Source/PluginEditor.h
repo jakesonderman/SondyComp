@@ -14,6 +14,8 @@
 #include "PluginProcessor.h"
 #include "WavetableEditor.h"
 #include "GainReductionMeter.h"
+#include "SondyLookAndFeel.h"
+#include "PluginBorder.h"
 
 //==============================================================================
 class MyPluginAudioProcessorEditor  : public juce::AudioProcessorEditor, private juce::Timer
@@ -32,6 +34,15 @@ private:
     // Reference to our processor
     MyPluginAudioProcessor& processorRef;
     
+    // Custom look and feel
+    SondyLookAndFeel sondyLookAndFeel;
+    PluginBorder pluginBorder;
+    
+    // Background animation properties
+    float animationPhase = 0.0f;
+    float animationSpeed = 0.2f;
+    bool enableBackgroundAnimation = true;
+    
     // Parameter sliders
     juce::Slider inputGainSlider;
     juce::Slider outputGainSlider;
@@ -47,7 +58,6 @@ private:
     juce::Label kneeLabel;
     juce::Label attackTimeLabel;
     juce::Label releaseTimeLabel;
-    juce::Label titleLabel;
     juce::Label attackEditorLabel;
     juce::Label releaseEditorLabel;
     
@@ -66,8 +76,8 @@ private:
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> attackTimeAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> releaseTimeAttachment;
     
-    // Look and feel
-    juce::LookAndFeel_V4 lookAndFeel;
+    // Draw background animation
+    void drawBackgroundAnimation(juce::Graphics& g);
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MyPluginAudioProcessorEditor)
 };
