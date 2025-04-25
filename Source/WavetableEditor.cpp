@@ -35,17 +35,26 @@ void WavetableEditor::paint(juce::Graphics& g)
     g.setColour(juce::Colour(0xFF303030));
     g.drawRect(getLocalBounds().reduced(2), 1);
     
-    // Draw grid
+    // Draw grid - more grid lines for larger display
     g.setColour(juce::Colour(0xFF353535));
-    for (int i = 0; i <= 4; ++i)
+    
+    // Draw horizontal grid lines
+    const int numHorizontalLines = 10;
+    for (int i = 0; i <= numHorizontalLines; ++i)
     {
-        float y = getHeight() * (1.0f - static_cast<float>(i) / 4.0f);
+        float y = getHeight() * (1.0f - static_cast<float>(i) / numHorizontalLines);
+        float alpha = (i % 5 == 0) ? 0.5f : 0.25f; // Stronger lines every 5 steps
+        g.setColour(juce::Colour(0xFF353535).withAlpha(alpha));
         g.drawLine(0.0f, y, static_cast<float>(getWidth()), y, 1.0f);
     }
     
-    for (int i = 0; i <= 4; ++i)
+    // Draw vertical grid lines
+    const int numVerticalLines = 10;
+    for (int i = 0; i <= numVerticalLines; ++i)
     {
-        float x = getWidth() * static_cast<float>(i) / 4.0f;
+        float x = getWidth() * static_cast<float>(i) / numVerticalLines;
+        float alpha = (i % 5 == 0) ? 0.5f : 0.25f; // Stronger lines every 5 steps
+        g.setColour(juce::Colour(0xFF353535).withAlpha(alpha));
         g.drawLine(x, 0.0f, x, static_cast<float>(getHeight()), 1.0f);
     }
     
@@ -83,8 +92,8 @@ void WavetableEditor::paint(juce::Graphics& g)
         }
     }
     
-    // Create stroke with thicker line
-    const float lineThickness = 2.5f;
+    // Create stroke with thicker line for larger display
+    const float lineThickness = 3.0f;
     
     // Draw a shadow under the curve for depth
     g.setColour(juce::Colour(0xFF151515));
@@ -92,11 +101,11 @@ void WavetableEditor::paint(juce::Graphics& g)
     
     // Draw the glow effect
     g.setColour(juce::Colour(0xFF2C9AFF).withAlpha(0.35f));
-    g.strokePath(path, juce::PathStrokeType(lineThickness + 6.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+    g.strokePath(path, juce::PathStrokeType(lineThickness + 8.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
     
     // Draw the brighter glow effect (closer to the line)
     g.setColour(juce::Colour(0xFF2C9AFF).withAlpha(0.4f));
-    g.strokePath(path, juce::PathStrokeType(lineThickness + 3.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+    g.strokePath(path, juce::PathStrokeType(lineThickness + 4.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
     
     // Draw the main curve with gradient
     juce::ColourGradient gradient(
@@ -106,6 +115,36 @@ void WavetableEditor::paint(juce::Graphics& g)
     
     g.setGradientFill(gradient);
     g.strokePath(path, juce::PathStrokeType(lineThickness, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+    
+    // Draw square handles at key points for easier editing on large display
+    const float handleSize = 6.0f;
+    g.setColour(juce::Colour(0xFFDDDDDD));
+    
+    // Draw handle at start and end points
+    float startX = wavetableIndexToX(0);
+    float startY = wavetableValueToY(wavetable[0]);
+    float endX = wavetableIndexToX(wavetable.size() - 1);
+    float endY = wavetableValueToY(wavetable[wavetable.size() - 1]);
+    
+    g.fillRect(startX - handleSize/2, startY - handleSize/2, handleSize, handleSize);
+    g.fillRect(endX - handleSize/2, endY - handleSize/2, handleSize, handleSize);
+    
+    // Draw handles at quarter points
+    const int quarterIdx = wavetable.size() / 4;
+    const int midIdx = wavetable.size() / 2;
+    const int threeQuarterIdx = 3 * wavetable.size() / 4;
+    
+    float quarterX = wavetableIndexToX(quarterIdx);
+    float quarterY = wavetableValueToY(wavetable[quarterIdx]);
+    g.fillRect(quarterX - handleSize/2, quarterY - handleSize/2, handleSize, handleSize);
+    
+    float midX = wavetableIndexToX(midIdx);
+    float midY = wavetableValueToY(wavetable[midIdx]);
+    g.fillRect(midX - handleSize/2, midY - handleSize/2, handleSize, handleSize);
+    
+    float threeQuarterX = wavetableIndexToX(threeQuarterIdx);
+    float threeQuarterY = wavetableValueToY(wavetable[threeQuarterIdx]);
+    g.fillRect(threeQuarterX - handleSize/2, threeQuarterY - handleSize/2, handleSize, handleSize);
 }
 
 void WavetableEditor::resized()

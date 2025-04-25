@@ -37,6 +37,14 @@ void GainReductionMeter::paint(juce::Graphics& g)
     g.setColour(juce::Colour(0xFF303030));
     g.drawRect(getLocalBounds().reduced(2), 1);
     
+    // Add a softer glow effect around the meter
+    juce::ColourGradient glowGradient(
+        juce::Colour(0xFF2C9AFF).withAlpha(0.08f), getWidth() * 0.5f, getHeight() * 0.5f,
+        juce::Colour(0xFF2C9AFF).withAlpha(0.0f), 0, 0,
+        true);
+    g.setGradientFill(glowGradient);
+    g.fillRect(getLocalBounds());
+    
     // Draw background grid with dB markings
     g.setColour(juce::Colour(0xFF454545));
     g.setFont(11.0f);
@@ -57,9 +65,9 @@ void GainReductionMeter::paint(juce::Graphics& g)
     
     // Draw vertical grid lines
     g.setColour(juce::Colour(0xFF353535));
-    for (int i = 0; i <= 4; ++i)
+    for (int i = 0; i <= 8; ++i) // More vertical grid lines for a cleaner look
     {
-        float x = i * getWidth() / 4.0f;
+        float x = i * getWidth() / 8.0f;
         g.drawLine(x, 0.0f, x, static_cast<float>(getHeight()), 1.0f);
     }
     
@@ -101,17 +109,25 @@ void GainReductionMeter::paint(juce::Graphics& g)
                 }
             }
             
-            // Draw the input level line with a green color
+            // Draw the input level line with enhanced appearance
             g.setColour(inputLineColor);
-            g.strokePath(inputPath, juce::PathStrokeType(1.5f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+            g.strokePath(inputPath, juce::PathStrokeType(2.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
             
             // Add a subtle fill below the input line
             inputPath.lineTo(static_cast<float>(getWidth()), static_cast<float>(getHeight() / 2));
             inputPath.lineTo(0.0f, static_cast<float>(getHeight() / 2));
             inputPath.closeSubPath();
             
-            g.setColour(inputLineColor.withAlpha(0.1f));
+            juce::ColourGradient inputGradient(
+                inputLineColor.withAlpha(0.2f), 0.0f, 0.0f,
+                inputLineColor.withAlpha(0.02f), 0.0f, static_cast<float>(getHeight() / 2),
+                false);
+            g.setGradientFill(inputGradient);
             g.fillPath(inputPath);
+            
+            // Add glow effect for input line
+            g.setColour(inputLineColor.withAlpha(0.1f));
+            g.strokePath(inputPath, juce::PathStrokeType(4.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
         }
         
         // ==== DRAW GAIN REDUCTION FROM THE BOTTOM ====
@@ -143,7 +159,7 @@ void GainReductionMeter::paint(juce::Graphics& g)
             
             // Create a gradient fill for the meter (starting from bottom)
             juce::ColourGradient gradient(
-                juce::Colour(0xFF2C9AFF).withAlpha(0.2f), 0.0f, static_cast<float>(getHeight()),
+                juce::Colour(0xFF2C9AFF).withAlpha(0.3f), 0.0f, static_cast<float>(getHeight()),
                 juce::Colour(0xFF2C9AFF).withAlpha(0.05f), 0.0f, static_cast<float>(getHeight() / 2),
                 false);
             
@@ -153,6 +169,10 @@ void GainReductionMeter::paint(juce::Graphics& g)
             // Draw the main GR line with a bolder stroke
             g.setColour(juce::Colour(0xFF2C9AFF));
             g.strokePath(fillPath, juce::PathStrokeType(2.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+            
+            // Add glow effect
+            g.setColour(juce::Colour(0xFF2C9AFF).withAlpha(0.3f));
+            g.strokePath(fillPath, juce::PathStrokeType(4.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
         }
         
         // Draw peak markers
@@ -160,15 +180,21 @@ void GainReductionMeter::paint(juce::Graphics& g)
         {
             float peakY = dbToY(peakGainReduction);
             
-            // Draw peak marker as a small triangle
-            const float triangleSize = 8.0f;
+            // Draw peak marker as a more visible diamond shape
+            const float markerSize = 10.0f;
             juce::Path peakMarker;
-            peakMarker.addTriangle(getWidth() - triangleSize - 5.0f, peakY,
-                                  getWidth() - 5.0f, peakY - triangleSize/2,
-                                  getWidth() - 5.0f, peakY + triangleSize/2);
+            peakMarker.addRectangle(-markerSize/2, -markerSize/2, markerSize, markerSize);
+            juce::AffineTransform transform = juce::AffineTransform::rotation(juce::MathConstants<float>::pi * 0.25f)
+                                             .translated(getWidth() - markerSize - 5.0f, peakY);
+            peakMarker.applyTransform(transform);
             
-            g.setColour(peakLineColor);
+            // Draw glow effect
+            g.setColour(peakLineColor.withAlpha(0.4f));
             g.fillPath(peakMarker);
+            
+            // Draw peak marker
+            g.setColour(peakLineColor);
+            g.strokePath(peakMarker, juce::PathStrokeType(1.0f));
             
             // Draw peak value text
             g.setFont(12.0f);
@@ -177,26 +203,56 @@ void GainReductionMeter::paint(juce::Graphics& g)
         }
     }
     
-    // Draw current gain reduction value label
-    g.setFont(14.0f);
-    juce::String valueText = juce::String(currentGainReduction, 1) + " dB";
-    int textWidth = 70;
-    int textHeight = 22;
+    // Draw current gain reduction value label with enhanced styling
+    const int textWidth = 80;
+    const int textHeight = 25;
     juce::Rectangle<int> textBox(10, 10, textWidth, textHeight);
     
+    // Draw background panel with soft glow
     g.setColour(juce::Colour(0xFF1D1D1D).withAlpha(0.8f));
     g.fillRoundedRectangle(textBox.toFloat(), 3.0f);
     
-    g.setColour(averageLineColor);
+    // Add subtle glow around the panel
+    g.setColour(juce::Colour(0xFF2C9AFF).withAlpha(0.15f));
+    g.drawRoundedRectangle(textBox.expanded(2, 2).toFloat(), 5.0f, 1.0f);
+    
+    g.setColour(juce::Colour(0xFF2C9AFF).withAlpha(0.3f));
     g.drawRoundedRectangle(textBox.toFloat(), 3.0f, 1.0f);
     
-    g.setColour(juce::Colour(0xFFE6E6E6));
+    // Draw text with drop shadow effect
+    g.setFont(14.0f);
+    juce::String valueText = juce::String(currentGainReduction, 1) + " dB";
+    
+    // Drop shadow
+    g.setColour(juce::Colours::black.withAlpha(0.5f));
+    g.drawText(valueText, textBox.translated(1, 1), juce::Justification::centred, false);
+    
+    // Actual text
+    g.setColour(juce::Colours::white);
     g.drawText(valueText, textBox, juce::Justification::centred, false);
     
-    // Add title label
-    g.setFont(12.0f);
-    g.setColour(juce::Colour(0xFF9E9E9E));
-    g.drawText("GAIN REDUCTION SCOPE", getLocalBounds().removeFromTop(20), juce::Justification::centredTop, false);
+    // Add title label with enhanced styling
+    juce::Rectangle<int> titleArea = getLocalBounds().removeFromTop(25);
+    
+    // Draw title background
+    g.setColour(juce::Colour(0xFF262626));
+    g.fillRect(titleArea.reduced(1));
+    
+    // Draw title border
+    g.setColour(juce::Colour(0xFF3A3A3A));
+    g.drawRect(titleArea.reduced(1), 1);
+    
+    // Draw title text with glow
+    g.setFont(14.0f);
+    juce::String titleText = "GAIN REDUCTION SCOPE";
+    
+    // Glow effect
+    g.setColour(juce::Colour(0xFF2C9AFF).withAlpha(0.2f));
+    g.drawText(titleText, titleArea.translated(0, 1), juce::Justification::centred, false);
+    
+    // Title text
+    g.setColour(juce::Colour(0xFFBBBBBB));
+    g.drawText(titleText, titleArea, juce::Justification::centred, false);
 }
 
 void GainReductionMeter::drawAnimatedBackground(juce::Graphics& g)

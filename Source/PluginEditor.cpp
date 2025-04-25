@@ -16,13 +16,16 @@ MyPluginAudioProcessorEditor::MyPluginAudioProcessorEditor (MyPluginAudioProcess
     auto setupSlider = [this](juce::Slider& slider, juce::Label& label, const juce::String& text) {
         addAndMakeVisible(slider);
         slider.setSliderStyle(juce::Slider::RotaryVerticalDrag);
-        slider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 60, 18);
+        slider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 80, 20);
         slider.setColour(juce::Slider::textBoxOutlineColourId, sondyLookAndFeel.getThemeColors().border);
+        slider.setColour(juce::Slider::rotarySliderFillColourId, sondyLookAndFeel.getThemeColors().accent);
+        slider.setColour(juce::Slider::rotarySliderOutlineColourId, sondyLookAndFeel.getThemeColors().border);
+        slider.setLookAndFeel(&sondyLookAndFeel);
         
         addAndMakeVisible(label);
         label.setText(text, juce::dontSendNotification);
         label.setJustificationType(juce::Justification::centred);
-        label.setFont(juce::Font(14.0f, juce::Font::bold));
+        label.setFont(juce::Font(16.0f, juce::Font::bold));
         label.attachToComponent(&slider, false);
     };
     
@@ -72,14 +75,15 @@ MyPluginAudioProcessorEditor::MyPluginAudioProcessorEditor (MyPluginAudioProcess
         addAndMakeVisible(label);
         label.setText(text, juce::dontSendNotification);
         label.setJustificationType(juce::Justification::centred);
-        label.setFont(juce::Font(14.0f, juce::Font::bold));
+        label.setFont(juce::Font(18.0f, juce::Font::bold));
+        label.setColour(juce::Label::textColourId, sondyLookAndFeel.getThemeColors().text.brighter(0.2f));
     };
     
     setupEditorLabel(attackEditorLabel, "ATTACK CURVE");
     setupEditorLabel(releaseEditorLabel, "RELEASE CURVE");
     
     // Set size of the editor
-    setSize (800, 600);
+    setSize (1000, 650);
     
     // Start the timer to update UI
     startTimerHz(60);
@@ -166,50 +170,84 @@ void MyPluginAudioProcessorEditor::resized()
     auto area = getLocalBounds().reduced(15);
     
     // Allow space for the title bar
-    area.removeFromTop(28);
-    area.removeFromTop(5); // Extra space after title
+    area.removeFromTop(30); // Slightly more space for the title
     
-    // Gain reduction meter at the top
-    gainReductionMeter.setBounds(area.removeFromTop(120));
+    // Calculate overall layout
+    const int verticalGap = 15; // Gap between sections
+    const int horizontalGap = 25; // Gap between main panels
     
-    // Main sliders in the middle
-    area.removeFromTop(20);
-    auto slidersArea = area.removeFromTop(120);
+    // We'll use a grid layout with three main columns
+    const int totalAvailableWidth = area.getWidth();
     
-    auto sliderWidth = slidersArea.getWidth() / 4;
+    // Calculate optimal widths for the three columns (attack, center, release)
+    const int wavetableWidth = (totalAvailableWidth - (2 * horizontalGap)) / 3;
+    const int centerWidth = wavetableWidth;
     
-    // Input and threshold on the left
-    auto leftArea = slidersArea.removeFromLeft(sliderWidth * 2);
-    auto inputArea = leftArea.removeFromLeft(sliderWidth);
-    inputGainSlider.setBounds(inputArea.removeFromTop(100).reduced(10));
+    // Divide main area into three distinct columns with gaps between them
+    auto leftArea = area.removeFromLeft(wavetableWidth);
+    area.removeFromLeft(horizontalGap); // Gap between left and center
+    auto centerArea = area.removeFromLeft(centerWidth);
+    area.removeFromLeft(horizontalGap); // Gap between center and right
+    auto rightArea = area; // Remaining area for release section
     
-    auto thresholdArea = leftArea;
-    thresholdSlider.setBounds(thresholdArea.removeFromTop(100).reduced(10));
+    // --- LEFT COLUMN (ATTACK) ---
+    auto attackLabelArea = leftArea.removeFromTop(30);
+    attackEditorLabel.setBounds(attackLabelArea);
     
-    // Knee and output on the right
-    auto rightArea = slidersArea;
-    auto kneeArea = rightArea.removeFromLeft(sliderWidth);
-    kneeSlider.setBounds(kneeArea.removeFromTop(100).reduced(10));
+    leftArea.removeFromTop(verticalGap); // Space after label
     
-    auto outputArea = rightArea;
-    outputGainSlider.setBounds(outputArea.removeFromTop(100).reduced(10));
+    auto attackSliderArea = leftArea.removeFromTop(70);
+    attackTimeSlider.setBounds(attackSliderArea);
     
-    // Attack and release controls at the bottom
-    area.removeFromTop(20);
-    auto bottomArea = area;
+    leftArea.removeFromTop(verticalGap); // Space after slider
     
-    auto attackArea = bottomArea.removeFromLeft(bottomArea.getWidth() / 2);
-    auto releaseArea = bottomArea;
+    // Wavetable editor takes the remaining space with padding
+    attackWavetableEditor.setBounds(leftArea);
     
-    // Attack controls
-    attackTimeSlider.setBounds(attackArea.removeFromTop(100).reduced(20));
-    attackEditorLabel.setBounds(attackArea.removeFromTop(25));
-    attackWavetableEditor.setBounds(attackArea.reduced(10));
+    // --- RIGHT COLUMN (RELEASE) ---
+    auto releaseLabelArea = rightArea.removeFromTop(30);
+    releaseEditorLabel.setBounds(releaseLabelArea);
     
-    // Release controls
-    releaseTimeSlider.setBounds(releaseArea.removeFromTop(100).reduced(20));
-    releaseEditorLabel.setBounds(releaseArea.removeFromTop(25));
-    releaseWavetableEditor.setBounds(releaseArea.reduced(10));
+    rightArea.removeFromTop(verticalGap); // Space after label
+    
+    auto releaseSliderArea = rightArea.removeFromTop(70);
+    releaseTimeSlider.setBounds(releaseSliderArea);
+    
+    rightArea.removeFromTop(verticalGap); // Space after slider
+    
+    // Wavetable editor takes the remaining space
+    releaseWavetableEditor.setBounds(rightArea);
+    
+    // --- CENTER COLUMN (CONTROLS & METER) ---
+    // GR meter at the top
+    auto meterHeight = centerArea.getHeight() * 0.4;
+    auto meterArea = centerArea.removeFromTop(meterHeight);
+    gainReductionMeter.setBounds(meterArea);
+    
+    centerArea.removeFromTop(verticalGap * 2); // Extra space between meter and controls
+    
+    // Four knobs in a grid (2x2) layout with spacing
+    const int knobWidth = centerWidth / 2;
+    const int knobHeight = 100;
+    const int knobSpacing = 15;
+    
+    // Top row - Input and Output
+    auto topRowArea = centerArea.removeFromTop(knobHeight);
+    auto inputArea = topRowArea.removeFromLeft(knobWidth).reduced(knobSpacing);
+    inputGainSlider.setBounds(inputArea);
+    
+    auto outputArea = topRowArea.reduced(knobSpacing);
+    outputGainSlider.setBounds(outputArea);
+    
+    centerArea.removeFromTop(verticalGap); // Space between rows
+    
+    // Bottom row - Threshold and Knee
+    auto bottomRowArea = centerArea.removeFromTop(knobHeight);
+    auto thresholdArea = bottomRowArea.removeFromLeft(knobWidth).reduced(knobSpacing);
+    thresholdSlider.setBounds(thresholdArea);
+    
+    auto kneeArea = bottomRowArea.reduced(knobSpacing);
+    kneeSlider.setBounds(kneeArea);
 }
 
 void MyPluginAudioProcessorEditor::timerCallback()
