@@ -47,7 +47,7 @@ void SondyLookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int wid
                                         juce::Slider& slider)
 {
     // Define dimensions
-    const auto radius = juce::jmin(width, height) * 0.38f;
+    const auto radius = juce::jmin(width, height) * 0.42f; // Increased size
     const auto centerX = x + width * 0.5f;
     const auto centerY = y + height * 0.5f;
     const auto radian = rotaryStartAngle + sliderPos * (rotaryEndAngle - rotaryStartAngle);
@@ -122,13 +122,7 @@ void SondyLookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int wid
     
     g.fillPath(pointerPath, juce::AffineTransform::rotation(radian).translated(centerX, centerY));
     
-    // Add center point
-    const float centerPointSize = radius * 0.15f;
-    g.setGradientFill(juce::ColourGradient(
-        themeColors.accent.brighter(0.3f), centerX - centerPointSize * 0.3f, centerY - centerPointSize * 0.3f,
-        themeColors.accent.darker(0.3f), centerX + centerPointSize * 0.3f, centerY + centerPointSize * 0.3f,
-        true));
-    g.fillEllipse(centerX - centerPointSize * 0.5f, centerY - centerPointSize * 0.5f, centerPointSize, centerPointSize);
+    // Removed center point
 }
 
 void SondyLookAndFeel::drawLabel(juce::Graphics& g, juce::Label& label)

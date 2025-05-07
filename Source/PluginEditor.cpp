@@ -34,8 +34,12 @@ MyPluginAudioProcessorEditor::MyPluginAudioProcessorEditor (MyPluginAudioProcess
     setupSlider(outputGainSlider, outputGainLabel, "OUTPUT");
     setupSlider(thresholdSlider, thresholdLabel, "THRESHOLD");
     setupSlider(kneeSlider, kneeLabel, "KNEE");
-    setupSlider(attackTimeSlider, attackTimeLabel, "ATTACK");
-    setupSlider(releaseTimeSlider, releaseTimeLabel, "RELEASE");
+    setupSlider(attackTimeSlider, attackTimeLabel, "ATTACK TIME");
+    setupSlider(releaseTimeSlider, releaseTimeLabel, "RELEASE TIME");
+    
+    // Configure sliders to show time in seconds for attack and release
+    attackTimeSlider.setTextValueSuffix(" s");
+    releaseTimeSlider.setTextValueSuffix(" s");
     
     // Connect sliders to parameters
     auto& parameters = processorRef.getParameters();
@@ -196,7 +200,7 @@ void MyPluginAudioProcessorEditor::resized()
     
     leftArea.removeFromTop(verticalGap); // Space after label
     
-    auto attackSliderArea = leftArea.removeFromTop(70);
+    auto attackSliderArea = leftArea.removeFromTop(80); // Increased height for slider
     attackTimeSlider.setBounds(attackSliderArea);
     
     leftArea.removeFromTop(verticalGap); // Space after slider
@@ -210,7 +214,7 @@ void MyPluginAudioProcessorEditor::resized()
     
     rightArea.removeFromTop(verticalGap); // Space after label
     
-    auto releaseSliderArea = rightArea.removeFromTop(70);
+    auto releaseSliderArea = rightArea.removeFromTop(80); // Increased height for slider
     releaseTimeSlider.setBounds(releaseSliderArea);
     
     rightArea.removeFromTop(verticalGap); // Space after slider
@@ -228,7 +232,7 @@ void MyPluginAudioProcessorEditor::resized()
     
     // Four knobs in a grid (2x2) layout with spacing
     const int knobWidth = centerWidth / 2;
-    const int knobHeight = 100;
+    const int knobHeight = 110; // Increased height for knobs
     const int knobSpacing = 15;
     
     // Top row - Input and Output

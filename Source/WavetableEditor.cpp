@@ -1,4 +1,96 @@
 #include "WavetableEditor.h"
+#include <cmath>
+
+// WavetablePresetButton implementation
+void WavetablePresetButton::paintButton(juce::Graphics& g, bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown)
+{
+    // Draw button background
+    const auto bounds = getLocalBounds().toFloat().reduced(1.0f);
+    const auto cornerSize = 3.0f;
+    
+    // Choose appropriate colors
+    juce::Colour baseColour = juce::Colour(0xFF3A3A3A);
+    if (shouldDrawButtonAsDown)
+        baseColour = juce::Colour(0xFF1C8AFF);
+    else if (shouldDrawButtonAsHighlighted)
+        baseColour = juce::Colour(0xFF4A4A4A);
+    else if (getToggleState())
+        baseColour = juce::Colour(0xFF2C9AFF);
+    
+    // Fill button
+    g.setColour(baseColour);
+    g.fillRoundedRectangle(bounds, cornerSize);
+    
+    // Draw outline
+    g.setColour(shouldDrawButtonAsDown ? juce::Colour(0xFF2C9AFF) : juce::Colour(0xFF5A5A5A));
+    g.drawRoundedRectangle(bounds, cornerSize, 1.0f);
+    
+    // Draw the curve symbol based on curve type
+    const float symbolMargin = 4.0f;
+    const juce::Rectangle<float> symbolBounds = bounds.reduced(symbolMargin);
+    juce::Path curvePath;
+    
+    switch (curveType)
+    {
+        case 0: // Linear
+        {
+            // Draw straight line from bottom-left to top-right
+            curvePath.startNewSubPath(symbolBounds.getX(), symbolBounds.getBottom());
+            curvePath.lineTo(symbolBounds.getRight(), symbolBounds.getY());
+            break;
+        }
+        case 1: // Exponential
+        {
+            // Draw exponential curve
+            curvePath.startNewSubPath(symbolBounds.getX(), symbolBounds.getBottom());
+            
+            for (float x = 0.0f; x <= 1.0f; x += 0.05f)
+            {
+                float y = 1.0f - std::pow(x, 2.0f); // Exponential curve
+                curvePath.lineTo(
+                    symbolBounds.getX() + x * symbolBounds.getWidth(),
+                    symbolBounds.getY() + y * symbolBounds.getHeight()
+                );
+            }
+            break;
+        }
+        case 2: // Logarithmic
+        {
+            // Draw logarithmic curve
+            curvePath.startNewSubPath(symbolBounds.getX(), symbolBounds.getBottom());
+            
+            for (float x = 0.0f; x <= 1.0f; x += 0.05f)
+            {
+                float y = 1.0f - std::sqrt(x); // Logarithmic curve
+                curvePath.lineTo(
+                    symbolBounds.getX() + x * symbolBounds.getWidth(),
+                    symbolBounds.getY() + y * symbolBounds.getHeight()
+                );
+            }
+            break;
+        }
+        case 3: // S-Curve
+        {
+            // Draw S-curve
+            curvePath.startNewSubPath(symbolBounds.getX(), symbolBounds.getBottom());
+            
+            for (float x = 0.0f; x <= 1.0f; x += 0.05f)
+            {
+                // Sigmoid function to create S-curve
+                float y = 1.0f - (1.0f / (1.0f + std::exp(-10.0f * (x - 0.5f))));
+                curvePath.lineTo(
+                    symbolBounds.getX() + x * symbolBounds.getWidth(),
+                    symbolBounds.getY() + y * symbolBounds.getHeight()
+                );
+            }
+            break;
+        }
+    }
+    
+    // Draw the curve with appropriate styling
+    g.setColour(juce::Colours::white);
+    g.strokePath(curvePath, juce::PathStrokeType(1.5f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+}
 
 WavetableEditor::WavetableEditor()
 {
@@ -7,6 +99,24 @@ WavetableEditor::WavetableEditor()
     {
         wavetable[i] = static_cast<float>(i) / static_cast<float>(wavetable.size() - 1);
     }
+    
+    // Set up preset buttons
+    linearButton.setCurveType(0);
+    expButton.setCurveType(1);
+    logButton.setCurveType(2);
+    sCurveButton.setCurveType(3);
+    
+    // Add buttons to component
+    addAndMakeVisible(linearButton);
+    addAndMakeVisible(expButton);
+    addAndMakeVisible(logButton);
+    addAndMakeVisible(sCurveButton);
+    
+    // Set up button callbacks
+    linearButton.onClick = [this] { presetButtonClicked(0); };
+    expButton.onClick = [this] { presetButtonClicked(1); };
+    logButton.onClick = [this] { presetButtonClicked(2); };
+    sCurveButton.onClick = [this] { presetButtonClicked(3); };
     
     setSize(300, 150);
 }
@@ -149,7 +259,26 @@ void WavetableEditor::paint(juce::Graphics& g)
 
 void WavetableEditor::resized()
 {
-    // Nothing specific to do here
+    // Position preset buttons at the top right of the component
+    const int buttonWidth = 32;
+    const int buttonHeight = 32;
+    const int buttonSpacing = 10;
+    const int rightMargin = 10;
+    const int topMargin = 10;
+    
+    auto buttonY = topMargin;
+    auto buttonX = getWidth() - rightMargin - (buttonWidth * 4) - (buttonSpacing * 3);
+    
+    linearButton.setBounds(buttonX, buttonY, buttonWidth, buttonHeight);
+    buttonX += buttonWidth + buttonSpacing;
+    
+    expButton.setBounds(buttonX, buttonY, buttonWidth, buttonHeight);
+    buttonX += buttonWidth + buttonSpacing;
+    
+    logButton.setBounds(buttonX, buttonY, buttonWidth, buttonHeight);
+    buttonX += buttonWidth + buttonSpacing;
+    
+    sCurveButton.setBounds(buttonX, buttonY, buttonWidth, buttonHeight);
 }
 
 void WavetableEditor::mouseDown(const juce::MouseEvent& e)
@@ -314,5 +443,126 @@ void WavetableEditor::interpolateWavetableValues(int startIndex, float startValu
             float interpolatedValue = startValue + t * (endValue - startValue);
             updateWavetableAtIndex(i, interpolatedValue);
         }
+    }
+}
+
+// Apply chosen preset curve
+void WavetableEditor::presetButtonClicked(int curveType)
+{
+    applyPresetCurve(curveType);
+    
+    // Notify callback after changing the wavetable
+    if (wavetableChangedCallback)
+    {
+        wavetableChangedCallback(wavetable);
+    }
+    
+    repaint();
+}
+
+// Apply a preset curve based on the selected type
+void WavetableEditor::applyPresetCurve(int curveType)
+{
+    switch (curveType)
+    {
+        case 0: applyLinearCurve(); break;
+        case 1: applyExponentialCurve(); break;
+        case 2: applyLogarithmicCurve(); break;
+        case 3: applySCurve(); break;
+    }
+}
+
+// Linear curve: straight line from start to end
+void WavetableEditor::applyLinearCurve()
+{
+    // For attack mode: 0 to 1
+    // For release mode: 1 to 0
+    const float startValue = isReleaseMode ? 1.0f : 0.0f;
+    const float endValue = isReleaseMode ? 0.0f : 1.0f;
+    
+    for (size_t i = 0; i < wavetable.size(); ++i)
+    {
+        float normalizedPos = static_cast<float>(i) / static_cast<float>(wavetable.size() - 1);
+        wavetable[i] = startValue + normalizedPos * (endValue - startValue);
+    }
+}
+
+// Exponential curve: starts slow, accelerates
+void WavetableEditor::applyExponentialCurve()
+{
+    const float startValue = isReleaseMode ? 1.0f : 0.0f;
+    const float endValue = isReleaseMode ? 0.0f : 1.0f;
+    const float range = endValue - startValue;
+    
+    for (size_t i = 0; i < wavetable.size(); ++i)
+    {
+        float normalizedPos = static_cast<float>(i) / static_cast<float>(wavetable.size() - 1);
+        float curveValue;
+        
+        if (isReleaseMode)
+        {
+            // For release: 1 - x^2 gives slower initial decrease
+            curveValue = 1.0f - std::pow(normalizedPos, 2.0f);
+        }
+        else
+        {
+            // For attack: x^2 gives slower initial increase
+            curveValue = std::pow(normalizedPos, 2.0f);
+        }
+        
+        wavetable[i] = startValue + curveValue * range;
+    }
+}
+
+// Logarithmic curve: starts fast, slows down
+void WavetableEditor::applyLogarithmicCurve()
+{
+    const float startValue = isReleaseMode ? 1.0f : 0.0f;
+    const float endValue = isReleaseMode ? 0.0f : 1.0f;
+    const float range = endValue - startValue;
+    
+    for (size_t i = 0; i < wavetable.size(); ++i)
+    {
+        float normalizedPos = static_cast<float>(i) / static_cast<float>(wavetable.size() - 1);
+        float curveValue;
+        
+        if (isReleaseMode)
+        {
+            // For release: sqrt(1-x) gives faster initial decrease
+            curveValue = std::sqrt(1.0f - normalizedPos);
+        }
+        else
+        {
+            // For attack: sqrt(x) gives faster initial increase
+            curveValue = std::sqrt(normalizedPos);
+        }
+        
+        wavetable[i] = startValue + curveValue * range;
+    }
+}
+
+// S-Curve: smooth transition with sigmoid shape
+void WavetableEditor::applySCurve()
+{
+    const float startValue = isReleaseMode ? 1.0f : 0.0f;
+    const float endValue = isReleaseMode ? 0.0f : 1.0f;
+    const float range = endValue - startValue;
+    
+    for (size_t i = 0; i < wavetable.size(); ++i)
+    {
+        float normalizedPos = static_cast<float>(i) / static_cast<float>(wavetable.size() - 1);
+        float curveValue;
+        
+        // Sigmoid function: 1/(1+e^(-k*(x-0.5)))
+        const float k = 10.0f; // Steepness of S-curve
+        curveValue = 1.0f / (1.0f + std::exp(-k * (normalizedPos - 0.5f)));
+        
+        if (isReleaseMode)
+        {
+            // For release: invert the curve
+            curveValue = 1.0f - curveValue;
+        }
+        
+        wavetable[i] = startValue + curveValue * range;
     }
 } 

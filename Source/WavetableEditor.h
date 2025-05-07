@@ -5,6 +5,21 @@
 #include <functional>
 
 //==============================================================================
+class WavetablePresetButton : public juce::Button
+{
+public:
+    WavetablePresetButton(const juce::String& name) : juce::Button(name) {}
+    
+    void paintButton(juce::Graphics& g, bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown) override;
+    
+    void setCurveType(int type) { curveType = type; }
+    int getCurveType() const { return curveType; }
+    
+private:
+    int curveType = 0; // 0: Linear, 1: Exponential, 2: Logarithmic, 3: S-Curve
+};
+
+//==============================================================================
 class WavetableEditor : public juce::Component
 {
 public:
@@ -42,6 +57,16 @@ private:
     // Calculate intermediate points between two indices
     void interpolateWavetableValues(int startIndex, float startValue, int endIndex, float endValue);
     
+    // Apply preset curves
+    void applyPresetCurve(int curveType);
+    void applyLinearCurve();
+    void applyExponentialCurve();
+    void applyLogarithmicCurve();
+    void applySCurve();
+    
+    // Callback for preset buttons
+    void presetButtonClicked(int curveType);
+    
     std::array<float, 256> wavetable;
     WavetableChangedCallback wavetableChangedCallback;
     
@@ -49,4 +74,10 @@ private:
     int lastDragIndex = -1;
     
     bool isReleaseMode = false;
+    
+    // Preset curve buttons
+    WavetablePresetButton linearButton {"Linear"};
+    WavetablePresetButton expButton {"Exponential"};
+    WavetablePresetButton logButton {"Logarithmic"};
+    WavetablePresetButton sCurveButton {"S-Curve"};
 }; 

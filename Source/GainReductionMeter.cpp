@@ -203,34 +203,6 @@ void GainReductionMeter::paint(juce::Graphics& g)
         }
     }
     
-    // Draw current gain reduction value label with enhanced styling
-    const int textWidth = 80;
-    const int textHeight = 25;
-    juce::Rectangle<int> textBox(10, 10, textWidth, textHeight);
-    
-    // Draw background panel with soft glow
-    g.setColour(juce::Colour(0xFF1D1D1D).withAlpha(0.8f));
-    g.fillRoundedRectangle(textBox.toFloat(), 3.0f);
-    
-    // Add subtle glow around the panel
-    g.setColour(juce::Colour(0xFF2C9AFF).withAlpha(0.15f));
-    g.drawRoundedRectangle(textBox.expanded(2, 2).toFloat(), 5.0f, 1.0f);
-    
-    g.setColour(juce::Colour(0xFF2C9AFF).withAlpha(0.3f));
-    g.drawRoundedRectangle(textBox.toFloat(), 3.0f, 1.0f);
-    
-    // Draw text with drop shadow effect
-    g.setFont(14.0f);
-    juce::String valueText = juce::String(currentGainReduction, 1) + " dB";
-    
-    // Drop shadow
-    g.setColour(juce::Colours::black.withAlpha(0.5f));
-    g.drawText(valueText, textBox.translated(1, 1), juce::Justification::centred, false);
-    
-    // Actual text
-    g.setColour(juce::Colours::white);
-    g.drawText(valueText, textBox, juce::Justification::centred, false);
-    
     // Add title label with enhanced styling
     juce::Rectangle<int> titleArea = getLocalBounds().removeFromTop(25);
     
